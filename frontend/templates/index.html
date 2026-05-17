@@ -578,6 +578,17 @@
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    .error-box {
+      margin-top: 18px;
+      padding: 12px 14px;
+      border: 1.5px solid #dc2626;
+      background: #fef2f2;
+      color: #991b1b;
+      font-size: 12px;
+      font-family: var(--mono);
+      line-height: 1.5;
+    }
+
     /* ── FLASH MESSAGE ── */
     .flash {
       position: fixed;
@@ -694,6 +705,10 @@
         </button>
       </form>
 
+      {% if error %}
+        <div class="error-box">{{ error }}</div>
+      {% endif %}
+
       <div class="cache-badges">
         {% if source %}
           {% if 'cache' in source %}
@@ -707,10 +722,10 @@
               Cache MISS — mis en cache
             </div>
           {% endif %}
-          <div class="cache-badge neutral">TTL 3600s</div>
+          <div class="cache-badge neutral">TTL {{ cache_ttl }}s</div>
         {% else %}
           <div class="cache-badge neutral">Redis prêt</div>
-          <div class="cache-badge neutral">TTL 3600s</div>
+          <div class="cache-badge neutral">TTL {{ cache_ttl }}s</div>
           <div class="cache-badge neutral">MD5 seed</div>
         {% endif %}
       </div>

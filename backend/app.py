@@ -6,6 +6,7 @@ import random
 from PIL import Image, ImageDraw
 
 app = Flask(__name__)
+APP_VERSION = "1.0.0"
 
 # ─── OpenAPI spec ────────────────────────────────────────────────────────────
 OPENAPI_SPEC = {
@@ -986,7 +987,7 @@ def generate_monster(name: str) -> bytes:
 
 # ─── Routes ──────────────────────────────────────────────────────────────────
 
-@app.route("/monster/<name>")
+@app.route("/monster/<path:name>")
 def monster(name: str):
     if not name or len(name) > 64:
         return {"error": "Nom invalide"}, 400
@@ -995,8 +996,14 @@ def monster(name: str):
 
 
 @app.route("/health")
+@app.route("/healthz")
 def health():
-    return jsonify({"status": "ok", "service": "monster-backend", "version": "1.0.0"})
+    return jsonify({"status": "ok", "service": "monster-backend", "version": APP_VERSION})
+
+
+@app.route("/readyz")
+def ready():
+    return jsonify({"status": "ready", "service": "monster-backend", "version": APP_VERSION})
 
 
 @app.route("/api/spec")
@@ -1011,4 +1018,5 @@ def swagger_ui():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080, debug=True)
+    # Mode local uniquement. En production Docker/Kubernetes, Gunicorn lance app:app.
+    app.run(host="0.0.0.0", port=8080, debug=False)

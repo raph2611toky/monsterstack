@@ -1,0 +1,205 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: monster-secret
+  namespace: prod
+type: Opaque
+stringData:
+  REDIS_PASSWORD: "RedisStr0ngP4ssw0rd"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: monster-config
+  namespace: prod
+data:
+  REDIS_HOST: "monster-redis"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  BACKEND_URL: "http://monster-backend:8080"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monster-redis
+  namespace: prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: monster-redis
+  template:
+    metadata:
+      labels:
+        app: monster-redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - redis-server --appendonly yes --requirepass "$REDIS_PASSWORD"
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: monster-secret
+                  key: REDIS_PASSWORD
+          ports:
+            - containerPort: 6379
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: monster-redis
+  namespace: prod
+spec:
+  type: ClusterIP
+  selector:
+    app: monster-redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monster-backend
+  namespace: prod
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: monster-backend
+  template:
+    metadata:
+      labels:
+        app: monster-backend
+    spec:
+      imagePullSecrets:
+        - name: registry-credentials
+      containers:
+        - name: monster-backend
+          image: registry-gc.duckdns.org/monster-backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: monster-config
+            - secretRef:
+                name: monster-secret
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 20
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: monster-backend
+  namespace: prod
+spec:
+  type: ClusterIP
+  selector:
+    app: monster-backend
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monster-frontend
+  namespace: prod
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: monster-frontend
+  template:
+    metadata:
+      labels:
+        app: monster-frontend
+    spec:
+      imagePullSecrets:
+        - name: registry-credentials
+      containers:
+        - name: monster-frontend
+          image: registry-gc.duckdns.org/monster-frontend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+          envFrom:
+            - configMapRef:
+                name: monster-config
+            - secretRef:
+                name: monster-secret
+          readinessProbe:
+            tcpSocket:
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 5000
+            initialDelaySeconds: 20
+            periodSeconds: 20
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: monster-frontend
+  namespace: prod
+spec:
+  type: ClusterIP
+  selector:
+    app: monster-frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: 5000
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: monster-frontend
+  namespace: prod
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - monster-gc.duckdns.org
+      secretName: monster-frontend-tls
+  rules:
+    - host: monster-gc.duckdns.org
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: monster-frontend
+                port:
+                  number: 80

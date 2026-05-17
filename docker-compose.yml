@@ -1,23 +1,51 @@
-version: "3.9"
-
 services:
   frontend:
     build: ./frontend
+    container_name: monster-frontend
     ports:
       - "5000:5000"
     environment:
-      - REDIS_HOST=redis
-      - BACKEND_URL=http://backend:8080
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_DB: "0"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-ChangeMeRedis123}
+      CACHE_TTL: ${CACHE_TTL:-3600}
+      BACKEND_URL: http://backend:8080
+      BACKEND_TIMEOUT: ${BACKEND_TIMEOUT:-5}
+      MAX_NAME_LENGTH: "64"
     depends_on:
-      - redis
-      - backend
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
 
   backend:
     build: ./backend
+    container_name: monster-backend
     ports:
       - "8080:8080"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=2)"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    container_name: monster-redis
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-ChangeMeRedis123}"]
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD:-ChangeMeRedis123} ping | grep PONG"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  redis-data:
