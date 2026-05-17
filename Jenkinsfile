@@ -20,7 +20,7 @@ spec:
           mountPath: /kaniko/.docker
 
     - name: kubectl
-      image: bitnami/kubectl:1.33.4
+      image: bitnamilegacy/kubectl:1.33.4
       command:
         - cat
       tty: true

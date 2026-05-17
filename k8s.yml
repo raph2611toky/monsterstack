@@ -1,4 +1,10 @@
 apiVersion: v1
+kind: Namespace
+metadata:
+  name: prod
+
+---
+apiVersion: v1
 kind: Secret
 metadata:
   name: monster-secret
@@ -17,6 +23,7 @@ data:
   REDIS_HOST: "monster-redis"
   REDIS_PORT: "6379"
   REDIS_DB: "0"
+  REDIS_PASSWORD: "RedisStr0ngP4ssw0rd"
   BACKEND_URL: "http://monster-backend:8080"
 
 ---
