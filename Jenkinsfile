@@ -14,33 +14,32 @@ spec:
     - name: kaniko-backend
       image: gcr.io/kaniko-project/executor:v1.23.2-debug
       command:
-        - cat
+        - sleep
+      args:
+        - "999999"
       tty: true
       volumeMounts:
         - name: kaniko-docker-config
           mountPath: /kaniko/.docker
-        - name: workspace-volume
-          mountPath: /home/jenkins/agent
 
     - name: kaniko-frontend
       image: gcr.io/kaniko-project/executor:v1.23.2-debug
       command:
-        - cat
+        - sleep
+      args:
+        - "999999"
       tty: true
       volumeMounts:
         - name: kaniko-docker-config
           mountPath: /kaniko/.docker
-        - name: workspace-volume
-          mountPath: /home/jenkins/agent
 
     - name: kubectl
-      image: bitnamilegacy/kubectl:1.33.4
+      image: alpine/kubectl:1.33.4
       command:
-        - cat
+        - sleep
+      args:
+        - "999999"
       tty: true
-      volumeMounts:
-        - name: workspace-volume
-          mountPath: /home/jenkins/agent
 
   volumes:
     - name: kaniko-docker-config
@@ -49,9 +48,6 @@ spec:
         items:
           - key: .dockerconfigjson
             path: config.json
-
-    - name: workspace-volume
-      emptyDir: {}
 """
         }
     }
@@ -101,16 +97,30 @@ spec:
             steps {
                 container('kubectl') {
                     sh """
+                        echo "--- Vérification kubectl ---"
+                        kubectl version --client=true
+
+                        echo "--- Déploiement Kubernetes ---"
                         kubectl apply -f ${K8S_FILE}
 
+                        echo "--- Mise à jour backend ---"
                         kubectl -n ${K8S_NAMESPACE} set image deployment/monster-backend \
                           monster-backend=${BACKEND_IMAGE}:${BUILD_NUMBER}
 
+                        echo "--- Mise à jour frontend ---"
                         kubectl -n ${K8S_NAMESPACE} set image deployment/monster-frontend \
                           monster-frontend=${FRONTEND_IMAGE}:${BUILD_NUMBER}
 
+                        echo "--- Vérification rollout backend ---"
                         kubectl -n ${K8S_NAMESPACE} rollout status deployment/monster-backend --timeout=180s
+
+                        echo "--- Vérification rollout frontend ---"
                         kubectl -n ${K8S_NAMESPACE} rollout status deployment/monster-frontend --timeout=180s
+
+                        echo "--- Ressources prod ---"
+                        kubectl get pods -n ${K8S_NAMESPACE}
+                        kubectl get svc -n ${K8S_NAMESPACE}
+                        kubectl get ingress -n ${K8S_NAMESPACE}
                     """
                 }
             }
