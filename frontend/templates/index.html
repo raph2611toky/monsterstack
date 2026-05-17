@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monster Stack</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #F5F0E8;
+      --ink: #1A1410;
+      --ink-muted: #6B6055;
+      --accent: #E8440A;
+      --accent-pale: #FAE8E0;
+      --accent-2: #2B6CB0;
+      --card-bg: #FFFDF8;
+      --border: #D4C8B8;
+      --mono: 'DM Mono', monospace;
+      --sans: 'Syne', sans-serif;
+    }
+
+    html { background: var(--bg); }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── GRID NOISE TEXTURE ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 39px, var(--border) 39px, var(--border) 40px),
+        repeating-linear-gradient(90deg, transparent, transparent 39px, var(--border) 39px, var(--border) 40px);
+      opacity: 0.25;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── HEADER ── */
+    header {
+      position: relative;
+      z-index: 10;
+      padding: 28px 48px 0;
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+    }
+
+    .logo-mark {
+      font-size: 13px;
+      font-weight: 700;
+      font-family: var(--mono);
+      color: var(--accent);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      border: 1.5px solid var(--accent);
+      padding: 4px 8px;
+    }
+
+    .logo-tagline {
+      font-size: 12px;
+      font-family: var(--mono);
+      color: var(--ink-muted);
+      letter-spacing: 0.05em;
+    }
+
+    .header-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%,100% { opacity:1; transform:scale(1); }
+      50% { opacity:0.6; transform:scale(0.85); }
+    }
+
+    .status-label {
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--ink-muted);
+    }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      z-index: 10;
+      padding: 60px 48px 0;
+      max-width: 1100px;
+    }
+
+    .hero-eyebrow {
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--ink-muted);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .hero h1 {
+      font-size: clamp(64px, 10vw, 120px);
+      font-weight: 800;
+      line-height: 0.9;
+      letter-spacing: -0.03em;
+      color: var(--ink);
+    }
+
+    .hero h1 .accent-word {
+      color: var(--accent);
+      position: relative;
+      display: inline-block;
+    }
+
+    .hero h1 .accent-word::after {
+      content: '';
+      position: absolute;
+      bottom: 4px;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: var(--accent);
+      opacity: 0.15;
+      transform: skewX(-3deg);
+    }
+
+    .hero-sub {
+      margin-top: 28px;
+      font-size: 16px;
+      color: var(--ink-muted);
+      font-family: var(--mono);
+      max-width: 480px;
+      line-height: 1.7;
+    }
+
+    /* ── MAIN LAYOUT ── */
+    .main-grid {
+      position: relative;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 32px;
+      padding: 48px 48px 80px;
+      max-width: 1100px;
+      align-items: start;
+    }
+
+    /* ── FORM PANEL ── */
+    .form-panel {
+      background: var(--card-bg);
+      border: 1.5px solid var(--border);
+      padding: 40px;
+      position: relative;
+    }
+
+    .form-panel::before {
+      content: '01';
+      position: absolute;
+      top: -14px;
+      left: 32px;
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--accent);
+      background: var(--bg);
+      padding: 0 8px;
+      font-weight: 500;
+    }
+
+    .panel-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+      margin-bottom: 32px;
+    }
+
+    .input-group {
+      position: relative;
+      margin-bottom: 24px;
+    }
+
+    .input-label {
+      display: block;
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--ink-muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .name-input {
+      width: 100%;
+      font-family: var(--sans);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--ink);
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid var(--ink);
+      padding: 8px 0;
+      outline: none;
+      transition: border-color 0.2s;
+      letter-spacing: -0.01em;
+    }
+
+    .name-input::placeholder {
+      color: var(--border);
+      font-weight: 400;
+    }
+
+    .name-input:focus {
+      border-bottom-color: var(--accent);
+    }
+
+    .input-hint {
+      margin-top: 8px;
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--ink-muted);
+    }
+
+    .generate-btn {
+      width: 100%;
+      background: var(--ink);
+      color: var(--bg);
+      border: none;
+      font-family: var(--sans);
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 18px 32px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.2s;
+      margin-top: 8px;
+    }
+
+    .generate-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--accent);
+      transform: translateX(-101%);
+      transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    .generate-btn:hover::before { transform: translateX(0); }
+    .generate-btn:active { transform: translateY(1px); }
+
+    .generate-btn span {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .btn-arrow {
+      font-size: 20px;
+      transition: transform 0.2s;
+    }
+    .generate-btn:hover .btn-arrow { transform: translateX(4px); }
+
+    /* ── CACHE STATUS ── */
+    .cache-badges {
+      display: flex;
+      gap: 12px;
+      margin-top: 32px;
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .cache-badge {
+      font-size: 11px;
+      font-family: var(--mono);
+      padding: 6px 12px;
+      border: 1.5px solid;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .cache-badge.hit {
+      border-color: #22c55e;
+      color: #166534;
+      background: #f0fdf4;
+    }
+
+    .cache-badge.miss {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-pale);
+    }
+
+    .cache-badge.neutral {
+      border-color: var(--border);
+      color: var(--ink-muted);
+      background: transparent;
+    }
+
+    /* ── RESULT PANEL ── */
+    .result-panel {
+      background: var(--card-bg);
+      border: 1.5px solid var(--border);
+      position: relative;
+    }
+
+    .result-panel::before {
+      content: '02';
+      position: absolute;
+      top: -14px;
+      left: 32px;
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--accent);
+      background: var(--bg);
+      padding: 0 8px;
+      font-weight: 500;
+    }
+
+    .result-header {
+      padding: 24px 32px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .result-title {
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--ink-muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .result-meta {
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--ink-muted);
+    }
+
+    .result-body {
+      padding: 48px 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 320px;
+      justify-content: center;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      animation: fade-in 0.4s ease;
+    }
+
+    .empty-icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+      opacity: 0.3;
+    }
+
+    .empty-text {
+      font-size: 13px;
+      font-family: var(--mono);
+      color: var(--ink-muted);
+      line-height: 1.8;
+    }
+
+    /* Monster display */
+    .monster-display {
+      animation: monster-appear 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+      text-align: center;
+    }
+
+    @keyframes monster-appear {
+      from { opacity:0; transform: scale(0.6) rotate(-8deg); }
+      to   { opacity:1; transform: scale(1)   rotate(0deg); }
+    }
+
+    .monster-frame {
+      width: 200px;
+      height: 200px;
+      border: 2px solid var(--border);
+      position: relative;
+      margin: 0 auto 24px;
+      background: white;
+    }
+
+    .monster-frame::before,
+    .monster-frame::after {
+      content: '';
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-color: var(--accent);
+      border-style: solid;
+    }
+
+    .monster-frame::before {
+      top: -4px; left: -4px;
+      border-width: 2px 0 0 2px;
+    }
+
+    .monster-frame::after {
+      bottom: -4px; right: -4px;
+      border-width: 0 2px 2px 0;
+    }
+
+    .monster-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .monster-name {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+      margin-bottom: 8px;
+    }
+
+    .monster-hash {
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--ink-muted);
+      word-break: break-all;
+      max-width: 280px;
+      margin: 0 auto 20px;
+    }
+
+    .source-tag {
+      font-size: 11px;
+      font-family: var(--mono);
+      padding: 5px 12px;
+      border: 1.5px solid;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .source-tag.from-cache {
+      border-color: #22c55e;
+      color: #166534;
+      background: #f0fdf4;
+    }
+
+    .source-tag.from-backend {
+      border-color: var(--accent-2);
+      color: var(--accent-2);
+      background: #eff6ff;
+    }
+
+    /* ── STATS STRIP ── */
+    .stats-strip {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      gap: 0;
+      max-width: 1100px;
+      margin: 0 48px 48px;
+      border: 1.5px solid var(--border);
+      background: var(--card-bg);
+      overflow: hidden;
+    }
+
+    .stat-item {
+      flex: 1;
+      padding: 20px 28px;
+      border-right: 1px solid var(--border);
+      position: relative;
+    }
+
+    .stat-item:last-child { border-right: none; }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--ink);
+      letter-spacing: -0.03em;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .stat-value.accent { color: var(--accent); }
+    .stat-value.green  { color: #166534; }
+
+    .stat-label {
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--ink-muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    /* ── TECH STRIP (bottom) ── */
+    .tech-strip {
+      position: relative;
+      z-index: 10;
+      overflow: hidden;
+      border-top: 1.5px solid var(--border);
+      border-bottom: 1.5px solid var(--border);
+      padding: 10px 0;
+      margin-bottom: 0;
+      background: var(--ink);
+    }
+
+    .tech-track {
+      display: flex;
+      gap: 48px;
+      white-space: nowrap;
+      animation: scroll-left 18s linear infinite;
+    }
+
+    @keyframes scroll-left {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+
+    .tech-item {
+      font-size: 12px;
+      font-family: var(--mono);
+      color: rgba(255,255,255,0.5);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .tech-item .dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    /* ── LOADING STATE ── */
+    .generating .generate-btn { pointer-events: none; }
+    .generating .generate-btn::before { transform: translateX(0); }
+
+    .spinner {
+      display: none;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── FLASH MESSAGE ── */
+    .flash {
+      position: fixed;
+      bottom: 32px;
+      right: 32px;
+      z-index: 100;
+      background: var(--ink);
+      color: white;
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 12px 20px;
+      border-left: 4px solid var(--accent);
+      animation: slide-up 0.3s ease;
+      max-width: 300px;
+    }
+
+    @keyframes slide-up {
+      from { opacity:0; transform: translateY(16px); }
+      to   { opacity:1; transform: translateY(0); }
+    }
+
+    @keyframes fade-in {
+      from { opacity:0; } to { opacity:1; }
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 800px) {
+      header { padding: 20px 24px 0; }
+      .hero { padding: 40px 24px 0; }
+      .main-grid {
+        grid-template-columns: 1fr;
+        padding: 32px 24px 60px;
+      }
+      .stats-strip { margin: 0 24px 32px; flex-wrap: wrap; }
+      .stat-item { min-width: 50%; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo-mark">Monster Stack</div>
+    <div class="logo-tagline">v1.0 · Flask + Redis</div>
+    <div class="header-right">
+      <div class="status-dot"></div>
+      <span class="status-label">Services opérationnels</span>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <div class="hero">
+    <p class="hero-eyebrow">Générateur d'avatars déterministes</p>
+    <h1>
+      Crée ton<br>
+      <span class="accent-word">Monstre</span>
+    </h1>
+    <p class="hero-sub">
+      Chaque nom génère un monstre unique &amp; reproductible.<br>
+      Les résultats sont mis en cache dans Redis.
+    </p>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-strip">
+    <div class="stat-item">
+      <div class="stat-value accent" id="stat-generated">—</div>
+      <div class="stat-label">Générés</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value green" id="stat-cached">—</div>
+      <div class="stat-label">Depuis cache</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" id="stat-ms">—</div>
+      <div class="stat-label">Dernier temps (ms)</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value" id="stat-hits">0%</div>
+      <div class="stat-label">Taux de cache hit</div>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+
+    <!-- FORM PANEL -->
+    <div class="form-panel">
+      <p class="panel-title">Paramètres de génération</p>
+
+      <form method="POST" id="monster-form" onsubmit="handleSubmit(event)">
+        <div class="input-group">
+          <label class="input-label" for="name-input">Nom du monstre</label>
+          <input
+            class="name-input"
+            type="text"
+            id="name-input"
+            name="name"
+            placeholder="ex: Globglob"
+            value="{{ name }}"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="64"
+          >
+          <p class="input-hint">← Le même nom produira toujours le même monstre</p>
+        </div>
+
+        <button class="generate-btn" type="submit" id="gen-btn">
+          <span>
+            <span id="btn-label">Générer le monstre</span>
+            <span class="btn-arrow">→</span>
+            <span class="spinner" id="btn-spinner"></span>
+          </span>
+        </button>
+      </form>
+
+      <div class="cache-badges">
+        {% if source %}
+          {% if 'cache' in source %}
+            <div class="cache-badge hit">
+              <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="#22c55e"/></svg>
+              Cache HIT
+            </div>
+          {% else %}
+            <div class="cache-badge miss">
+              <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="#E8440A"/></svg>
+              Cache MISS — mis en cache
+            </div>
+          {% endif %}
+          <div class="cache-badge neutral">TTL 3600s</div>
+        {% else %}
+          <div class="cache-badge neutral">Redis prêt</div>
+          <div class="cache-badge neutral">TTL 3600s</div>
+          <div class="cache-badge neutral">MD5 seed</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- RESULT PANEL -->
+    <div class="result-panel">
+      <div class="result-header">
+        <span class="result-title">Résultat</span>
+        {% if name %}
+          <span class="result-meta font-mono">id: {{ name | lower | replace(' ', '-') }}</span>
+        {% endif %}
+      </div>
+
+      <div class="result-body">
+        {% if image %}
+          <div class="monster-display" id="monster-output">
+            <div class="monster-frame">
+              <img src="data:image/png;base64,{{ image }}" alt="Avatar monstre {{ name }}">
+            </div>
+            <div class="monster-name">{{ name }}</div>
+            <div class="monster-hash">seed: {{ name | lower | replace(' ', '') }}</div>
+            {% if 'cache' in source %}
+              <div class="source-tag from-cache">
+                <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3.5" fill="#22c55e"/></svg>
+                Depuis Redis
+              </div>
+            {% else %}
+              <div class="source-tag from-backend">
+                <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3.5" fill="#2B6CB0"/></svg>
+                Généré par le backend
+              </div>
+            {% endif %}
+          </div>
+        {% else %}
+          <div class="empty-state" id="empty-state">
+            <div class="empty-icon">◻</div>
+            <p class="empty-text">
+              Entre un nom à gauche<br>
+              et appuie sur Générer
+            </p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TECH TICKER -->
+  <div class="tech-strip" aria-hidden="true">
+    <div class="tech-track">
+      <span class="tech-item"><span class="dot"></span>Flask 3.0</span>
+      <span class="tech-item"><span class="dot"></span>Redis 7</span>
+      <span class="tech-item"><span class="dot"></span>Pillow 10</span>
+      <span class="tech-item"><span class="dot"></span>Kubernetes GKE</span>
+      <span class="tech-item"><span class="dot"></span>Docker</span>
+      <span class="tech-item"><span class="dot"></span>Python 3.12</span>
+      <span class="tech-item"><span class="dot"></span>MD5 Seed</span>
+      <span class="tech-item"><span class="dot"></span>TTL Cache</span>
+      <!-- Duplicate for seamless loop -->
+      <span class="tech-item"><span class="dot"></span>Flask 3.0</span>
+      <span class="tech-item"><span class="dot"></span>Redis 7</span>
+      <span class="tech-item"><span class="dot"></span>Pillow 10</span>
+      <span class="tech-item"><span class="dot"></span>Kubernetes GKE</span>
+      <span class="tech-item"><span class="dot"></span>Docker</span>
+      <span class="tech-item"><span class="dot"></span>Python 3.12</span>
+      <span class="tech-item"><span class="dot"></span>MD5 Seed</span>
+      <span class="tech-item"><span class="dot"></span>TTL Cache</span>
+    </div>
+  </div>
+
+  <script>
+    // Stats from sessionStorage
+    let stats = JSON.parse(sessionStorage.getItem('monster_stats') || '{"gen":0,"cached":0,"total":0}');
+
+    function updateStats(isCached, ms) {
+      stats.total++;
+      if (isCached) stats.cached++;
+      else stats.gen++;
+      sessionStorage.setItem('monster_stats', JSON.stringify(stats));
+      renderStats(ms);
+    }
+
+    function renderStats(ms) {
+      const pct = stats.total > 0 ? Math.round((stats.cached / stats.total) * 100) : 0;
+      document.getElementById('stat-generated').textContent = stats.gen;
+      document.getElementById('stat-cached').textContent    = stats.cached;
+      document.getElementById('stat-ms').textContent        = ms !== undefined ? ms + 'ms' : '—';
+      document.getElementById('stat-hits').textContent      = pct + '%';
+    }
+
+    renderStats();
+
+    // On page load after POST, update stats
+    {% if image %}
+      const isCached = {{ ('true' if 'cache' in source else 'false') }};
+      updateStats(isCached);
+    {% endif %}
+
+    // Handle submit animation
+    function handleSubmit(e) {
+      const btn = document.getElementById('gen-btn');
+      const label = document.getElementById('btn-label');
+      const spinner = document.getElementById('btn-spinner');
+      const arrow = btn.querySelector('.btn-arrow');
+      const t0 = performance.now();
+      label.textContent = 'Génération...';
+      arrow.style.display = 'none';
+      spinner.style.display = 'block';
+      btn.disabled = true;
+    }
+
+    // Character counter
+    const input = document.getElementById('name-input');
+    input.addEventListener('input', () => {
+      input.style.color = input.value.length > 0 ? 'var(--ink)' : '';
+    });
+  </script>
+
+</body>
+</html>

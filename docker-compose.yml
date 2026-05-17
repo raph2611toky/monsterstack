@@ -1,0 +1,23 @@
+version: "3.9"
+
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "5000:5000"
+    environment:
+      - REDIS_HOST=redis
+      - BACKEND_URL=http://backend:8080
+    depends_on:
+      - redis
+      - backend
+
+  backend:
+    build: ./backend
+    ports:
+      - "8080:8080"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
