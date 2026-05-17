@@ -9,8 +9,9 @@ metadata:
     app: monsterstack-builder
 spec:
   serviceAccountName: jenkins
+
   containers:
-    - name: kaniko
+    - name: kaniko-backend
       image: gcr.io/kaniko-project/executor:v1.23.2-debug
       command:
         - cat
@@ -18,12 +19,28 @@ spec:
       volumeMounts:
         - name: kaniko-docker-config
           mountPath: /kaniko/.docker
+        - name: workspace-volume
+          mountPath: /home/jenkins/agent
+
+    - name: kaniko-frontend
+      image: gcr.io/kaniko-project/executor:v1.23.2-debug
+      command:
+        - cat
+      tty: true
+      volumeMounts:
+        - name: kaniko-docker-config
+          mountPath: /kaniko/.docker
+        - name: workspace-volume
+          mountPath: /home/jenkins/agent
 
     - name: kubectl
       image: bitnamilegacy/kubectl:1.33.4
       command:
         - cat
       tty: true
+      volumeMounts:
+        - name: workspace-volume
+          mountPath: /home/jenkins/agent
 
   volumes:
     - name: kaniko-docker-config
@@ -32,14 +49,14 @@ spec:
         items:
           - key: .dockerconfigjson
             path: config.json
+
+    - name: workspace-volume
+      emptyDir: {}
 """
         }
     }
 
     environment {
-        REPO_URL = "https://github.com/raph2611toky/monsterstack.git"
-        BRANCH = "main"
-
         REGISTRY = "registry-gc.duckdns.org"
 
         BACKEND_IMAGE = "${REGISTRY}/monster-backend"
@@ -49,34 +66,17 @@ spec:
         K8S_FILE = "k8s.yml"
     }
 
-    triggers {
-        GenericTrigger(
-            genericVariables: [
-                [key: 'ref', value: '$.ref'],
-                [key: 'repository', value: '$.repository.full_name']
-            ],
-            token: "T4zONcGflGr0FJrHIATACqznFfdnDPmS3UMsLzvI9W1OhFUk525vRyzDKn4vQVB22jWOTZB7vU5x1N6GQ001hWSK34gOlAlGkhjEf9xyu0iPgDMFXF6IdTBvWCAWfFARyYG3FQxYgiZGlNIpcSEYNpglVLYcM9BHCCnTdtorvjM35IoyXJRPMdwkRSf0BGHhBB69i4A8",
-            printContributedVariables: true,
-            printPostContent: false
-        )
-    }
-
     stages {
-        stage('Clone Repository') {
-            steps {
-                git url: "${REPO_URL}", branch: "${BRANCH}"
-            }
-        }
-
         stage('Build and Push Backend') {
             steps {
-                container('kaniko') {
+                container('kaniko-backend') {
                     sh """
                         /kaniko/executor \
                           --context ${WORKSPACE}/backend \
                           --dockerfile ${WORKSPACE}/backend/Dockerfile \
                           --destination ${BACKEND_IMAGE}:${BUILD_NUMBER} \
-                          --destination ${BACKEND_IMAGE}:latest
+                          --destination ${BACKEND_IMAGE}:latest \
+                          --cleanup
                     """
                 }
             }
@@ -84,13 +84,14 @@ spec:
 
         stage('Build and Push Frontend') {
             steps {
-                container('kaniko') {
+                container('kaniko-frontend') {
                     sh """
                         /kaniko/executor \
                           --context ${WORKSPACE}/frontend \
                           --dockerfile ${WORKSPACE}/frontend/Dockerfile \
                           --destination ${FRONTEND_IMAGE}:${BUILD_NUMBER} \
-                          --destination ${FRONTEND_IMAGE}:latest
+                          --destination ${FRONTEND_IMAGE}:latest \
+                          --cleanup
                     """
                 }
             }
